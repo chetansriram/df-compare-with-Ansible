@@ -1,0 +1,69 @@
+---
+
+  - name: df pre
+    hosts: all
+    gather_facts: no
+    serial: 1
+    ignore_unreachable: yes
+    ignore_errors: yes
+    tags: pre
+
+    tasks:
+
+      - name: create file
+        file:
+          dest: /home/m0156751/ansible/{{chg}}.pre
+          state: touch
+        delegate_to: localhost
+
+      - name: PRE Checks
+        raw: "df -hP -t nfs |awk '{print $6}'|awk '(NR>1)' > /var/tmp/{{chg}}.pre"
+      - name: local write
+        raw: "df -hP -t nfs |awk '{print $6}'|awk '(NR>1)'"
+        register: precheck
+      - local_action: lineinfile line="\nFilessytems existing during prechecks on {{inventory_hostname}}\n\n{{precheck.stdout_lines|join('\n')}}\n" dest=/home/m0156751/ansible/{{chg}}.pre insertafter=EOF
+
+
+  - name: df post
+    hosts: all
+    gather_facts: no
+    serial: 1
+    ignore_unreachable: yes
+    ignore_errors: yes
+    tags: post
+
+    tasks:
+
+      - name: create file
+        file:
+          dest: /home/m0156751/ansible/{{chg}}.post
+          state: touch
+        delegate_to: localhost
+
+      - name: POST Checks
+        raw: "df -hP -t nfs |awk '{print $6}'|awk '(NR>1)' > /var/tmp/{{chg}}.post"
+      - name: local post write
+        raw: "df -hP -t nfs |awk '{print $6}'|awk '(NR>1)'"
+        register: postcheck
+      - local_action: lineinfile line="\nFilessytems existing during postchecks on {{inventory_hostname}}\n\n{{postcheck.stdout_lines|join('\n')}}\n" dest=/home/m0156751/ansible/{{chg}}.post insertafter=EOF
+
+  - name: df output
+    hosts: all
+    gather_facts: no
+    serial: 1
+    ignore_unreachable: yes
+    ignore_errors: yes
+    tags: compare
+
+    tasks:
+      - name: create file
+        file:
+          dest: /home/m0156751/ansible/{{chg}}.compare
+          state: touch
+        delegate_to: localhost
+
+      - name: df compare
+       # raw: "diff -y /var/tmp/{{chg}}.pre /var/tmp/{{chg}}.post"
+        raw: "comm -2 -3 <(sort /var/tmp/{{chg}}.pre) <(sort /var/tmp/{{chg}}.post)"
+        register: df
+      - local_action: lineinfile line="\nMissing filessytems on {{inventory_hostname}}\n\n{{df.stdout_lines|join('\n')}}\n" dest=/home/m0156751/ansible/{{chg}}.compare insertafter=EOF
