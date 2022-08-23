@@ -63,7 +63,6 @@
         delegate_to: localhost
 
       - name: df compare
-       # raw: "diff -y /var/tmp/{{chg}}.pre /var/tmp/{{chg}}.post"
         raw: "comm -2 -3 <(sort /var/tmp/{{chg}}.pre) <(sort /var/tmp/{{chg}}.post)"
         register: df
       - local_action: lineinfile line="\nMissing filessytems on {{inventory_hostname}}\n\n{{df.stdout_lines|join('\n')}}\n" dest=/home/m0156751/ansible/{{chg}}.compare insertafter=EOF
